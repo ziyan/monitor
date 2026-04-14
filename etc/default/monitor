@@ -1,0 +1,34 @@
+# /etc/default/monitor
+# Per-deployment configuration for monitor.
+# This file should be installed to /etc/default/monitor on each machine.
+
+# Log directory.
+MONITOR_LOG_DIR="/var/log/monitor"
+
+# Show mouse cursor on screen and VNC. Set to 1 to enable.
+MONITOR_SHOW_CURSOR=0
+
+# Force GPU driver. Leave empty to auto-detect.
+# Supported values: "nvidia", "modesetting"
+#MONITOR_GPU_DRIVER=""
+
+# Custom display mode name. Leave empty to use display's preferred mode.
+#MONITOR_MODE_NAME="television"
+
+# Custom display modeline (cvt/gtf format). Leave empty to use display's preferred mode.
+#MONITOR_MODE="173.00 1920 2048 2248 2576 1080 1083 1088 1120 -hsync +vsync"
+
+# Framebuffer size. Leave empty for auto.
+#MONITOR_FRAMEBUFFER="1920x1080"
+
+# Extra xrandr output arguments.
+MONITOR_XRANDR_ARGS="--pos 0x0"
+
+# URLs to cycle through (one per line).
+MONITOR_URLS="
+https://www.google.com/
+https://www.youtube.com/
+"
+
+# Tab switching interval in seconds.
+MONITOR_SWITCH_INTERVAL=30

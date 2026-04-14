@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Monitor",
+  "version": "3.0",
+  "permissions": ["tabs", "alarms", "storage"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
+}

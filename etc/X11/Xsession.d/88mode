@@ -1,0 +1,62 @@
+# source per-deployment config
+. /etc/default/monitor
+
+# convert a /sys/class/drm entry name to an xrandr output name
+# e.g. card0-HDMI-A-1 -> HDMI-1, card0-DP-1 -> DP-1, card0-VGA-1 -> VGA-1
+drm_to_xrandr() {
+    local OUTPUT_NAME="$1"
+    # strip card prefix: card0-HDMI-A-1 -> HDMI-A-1
+    OUTPUT_NAME="${OUTPUT_NAME#card*-}"
+    # HDMI-A-N or HDMI-B-N -> HDMI-N
+    if [ "${OUTPUT_NAME#HDMI-?-}" != "${OUTPUT_NAME}" ]; then
+        OUTPUT_NAME="HDMI-${OUTPUT_NAME#HDMI-?-}"
+    fi
+    echo "${OUTPUT_NAME}"
+}
+
+# discover outputs and their connection status
+CONNECTED_OUTPUTS=""
+for STATUS_FILE in /sys/class/drm/card*/status; do
+    [ -f "${STATUS_FILE}" ] || continue
+
+    DRM_NAME="$(basename $(dirname ${STATUS_FILE}))"
+    OUTPUT="$(drm_to_xrandr ${DRM_NAME})"
+    STATUS="$(cat ${STATUS_FILE})"
+
+    if [ "${STATUS}" = "connected" ]; then
+        CONNECTED_OUTPUTS="${CONNECTED_OUTPUTS} ${OUTPUT}"
+        echo "display connected: ${OUTPUT}"
+    else
+        echo "display disconnected: ${OUTPUT}, turning off"
+        xrandr --output ${OUTPUT} --off >/dev/null 2>&1 || true
+    fi
+done
+
+# configure connected outputs
+if [ -n "${MONITOR_MODE}" ]; then
+    # use custom modeline
+    MONITOR_MODE_NAME="${MONITOR_MODE_NAME:-monitor}"
+    echo "creating custom mode: ${MONITOR_MODE_NAME} ${MONITOR_MODE}"
+    xrandr --newmode ${MONITOR_MODE_NAME} ${MONITOR_MODE} >/dev/null 2>&1 || true
+
+    for OUTPUT in ${CONNECTED_OUTPUTS}; do
+        xrandr --addmode ${OUTPUT} ${MONITOR_MODE_NAME} >/dev/null 2>&1 || true
+        echo "xrandr --output ${OUTPUT} --mode ${MONITOR_MODE_NAME} ${MONITOR_XRANDR_ARGS:-}"
+        xrandr --output ${OUTPUT} --mode ${MONITOR_MODE_NAME} ${MONITOR_XRANDR_ARGS:-} >/dev/null 2>&1 || true
+    done
+else
+    # use display's preferred mode
+    for OUTPUT in ${CONNECTED_OUTPUTS}; do
+        echo "xrandr --output ${OUTPUT} --preferred ${MONITOR_XRANDR_ARGS:-}"
+        xrandr --output ${OUTPUT} --preferred ${MONITOR_XRANDR_ARGS:-} >/dev/null 2>&1 || true
+    done
+fi
+
+# set framebuffer size if configured
+if [ -n "${MONITOR_FRAMEBUFFER}" ]; then
+    echo "xrandr --fb ${MONITOR_FRAMEBUFFER}"
+    xrandr --fb ${MONITOR_FRAMEBUFFER} >/dev/null 2>&1 || true
+fi
+
+# signal that display configuration is complete
+touch /run/monitor/display-ready

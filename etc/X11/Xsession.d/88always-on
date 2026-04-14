@@ -1,0 +1,5 @@
+# disable screensaver and screen blanking
+xset s off
+xset -dpms
+xset s noblank
+

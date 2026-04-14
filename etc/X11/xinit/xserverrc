@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# shellcheck source=/dev/null
+. /etc/default/monitor
+
+CURSOR_FLAG=""
+if [ "${MONITOR_SHOW_CURSOR}" != "1" ]; then
+    CURSOR_FLAG="-nocursor"
+fi
+
+exec X -configdir /run/monitor/X11/xorg.conf.d/ ${CURSOR_FLAG} -nolisten tcp "$@"

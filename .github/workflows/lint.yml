@@ -1,0 +1,70 @@
+name: lint
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: lint bash scripts
+        run: |
+          find bin -name '*.bash' -exec shellcheck -s bash {} +
+
+      - name: lint sh scripts
+        run: |
+          shellcheck -s sh etc/X11/xinit/xinitrc etc/X11/xinit/xserverrc
+
+  json:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: validate json
+        run: |
+          find . -name '*.json' -not -path './.git/*' -exec python3 -c "
+          import json, sys
+          for path in sys.argv[1:]:
+              try:
+                  json.load(open(path))
+                  print(f'  ok: {path}')
+              except Exception as e:
+                  print(f'FAIL: {path}: {e}')
+                  sys.exit(1)
+          " {} +
+
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: verify install script is idempotent
+        run: |
+          # create a fake /etc/default so install can write to it
+          sudo mkdir -p /etc/default /etc/supervisor/conf.d /var/log/monitor
+          sudo chmod 777 /etc/default /etc/supervisor/conf.d
+
+          # create monitor user
+          sudo useradd -m -U -s /bin/false monitor
+
+          # run install twice to verify idempotency
+          bash bin/install.bash
+          bash bin/install.bash
+
+          # verify generated supervisor config has no placeholders
+          if grep -q '@@' etc/supervisor/conf-available.d/monitor.conf; then
+            echo "FAIL: unsubstituted placeholders in generated config"
+            cat etc/supervisor/conf-available.d/monitor.conf
+            exit 1
+          fi
+
+          echo "generated supervisor config:"
+          cat etc/supervisor/conf-available.d/monitor.conf
