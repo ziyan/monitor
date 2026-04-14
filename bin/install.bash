@@ -3,6 +3,20 @@ set -e
 
 INSTALL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
+# check required dependencies
+REQUIRED_PACKAGES="chromium x11vnc supervisor xinit rsync sudo"
+MISSING_PACKAGES=""
+for PACKAGE in ${REQUIRED_PACKAGES}; do
+    if ! dpkg -s "${PACKAGE}" >/dev/null 2>&1; then
+        MISSING_PACKAGES="${MISSING_PACKAGES} ${PACKAGE}"
+    fi
+done
+if [ -n "${MISSING_PACKAGES}" ]; then
+    echo "missing required packages:${MISSING_PACKAGES}"
+    echo "install them with: apt-get install${MISSING_PACKAGES}"
+    exit 1
+fi
+
 # install default config if not present
 if [ ! -f /etc/default/monitor ]; then
     cp "${INSTALL_DIR}/etc/default/monitor" /etc/default/monitor

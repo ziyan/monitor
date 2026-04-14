@@ -24,14 +24,19 @@ For nvidia GPU, also install:
 apt-get install nvidia-kernel-dkms nvidia-driver firmware-misc-nonfree
 ```
 
-Deploy and run the install script:
+Deploy and run the install script. The install path is auto-detected, so the project can live anywhere:
 
 ```bash
 rsync -ax --progress --delete ./ <host>:/opt/monitor/
 ssh <host> /opt/monitor/bin/install.bash
 ```
 
-The install script creates the monitor user, log directory, generates the supervisor config, and symlinks it. It also installs `/etc/default/monitor` with defaults if not already present.
+The install script:
+- Creates the `monitor` user
+- Installs `/etc/default/monitor` with defaults (if not already present)
+- Creates the log directory
+- Generates the supervisor config from template
+- Symlinks it to `/etc/supervisor/conf.d/`
 
 Disable lid switch (for laptops):
 
@@ -50,6 +55,8 @@ ssh <host> /opt/monitor/bin/install.bash
 ssh <host> supervisorctl restart monitor:
 ```
 
+The install script is idempotent and safe to run multiple times.
+
 ## Configuration
 
 All per-deployment settings live in `/etc/default/monitor` on each machine. This file is created by `install.bash` on first run and is not overwritten by subsequent installs.
@@ -60,12 +67,12 @@ After changing `/etc/default/monitor`, re-run `install.bash` to regenerate the s
 |---|---|---|
 | `MONITOR_LOG_DIR` | `/var/log/monitor` | Log directory |
 | `MONITOR_SHOW_CURSOR` | `0` | Set to `1` to show mouse cursor on screen and VNC |
-| `MONITOR_GPU_DRIVER` | auto-detect | Force `nvidia` or `modesetting` |
+| `MONITOR_GPU_DRIVER` | (auto-detect) | Force `nvidia` or `modesetting` |
 | `MONITOR_MODE_NAME` | (empty) | Custom display mode name for xrandr |
 | `MONITOR_MODE` | (empty) | Custom modeline, leave empty for display's preferred mode |
 | `MONITOR_FRAMEBUFFER` | (empty) | Force framebuffer size, e.g. `1920x1080` |
 | `MONITOR_XRANDR_ARGS` | `--pos 0x0` | Extra xrandr output arguments |
-| `MONITOR_URLS` | (empty) | URLs to cycle through, one per line |
+| `MONITOR_URLS` | (see default config) | URLs to cycle through, one per line |
 | `MONITOR_SWITCH_INTERVAL` | `30` | Tab switching interval in seconds |
 
 Example with a custom modeline for a TV without proper EDID:
@@ -89,3 +96,11 @@ tail -f /var/log/monitor/x11.log
 tail -f /var/log/monitor/chromium.log
 tail -f /var/log/monitor/vncserver.log
 ```
+
+## CI
+
+GitHub Actions runs on push and pull requests to `main`:
+
+- **shellcheck** - lints all shell scripts
+- **json** - validates JSON files
+- **install** - verifies the install script is idempotent and generates valid config
